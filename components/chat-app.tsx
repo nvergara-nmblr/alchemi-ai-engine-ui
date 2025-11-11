@@ -117,7 +117,7 @@ export function ChatApp() {
   }
 
   return (
-    <div className="w-full max-w-4xl h-screen md:h-[800px]">
+    <div className="w-full max-w-4xl h-[calc(100vh-200px)]">
       <Card className="flex flex-col shadow-lg h-full">
         {/* Messages Container */}
         
