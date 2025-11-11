@@ -50,10 +50,10 @@ export function ChatApp() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
-  // const [threadId, setThreadId] = useState<string | null>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [threadId, setThreadId] = useState("")
   const [structuredOutput, setStructuredOutput] = useState<"null" | "PROFILE_LIST" | "PROFILE" | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
  
 
   // Auto-scroll to bottom when messages change
@@ -64,6 +64,10 @@ export function ChatApp() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   const handleSend = async () => {
     if (!input.trim()) return
@@ -106,6 +110,9 @@ export function ChatApp() {
       setMessages((prev) => [...prev, errorMessage])
     } finally {
       setLoading(false)
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 200)
     }
   }
 
@@ -117,11 +124,14 @@ export function ChatApp() {
   }
 
   return (
-    <div className="w-full max-w-4xl h-[calc(100vh-200px)]">
-      <Card className="flex flex-col shadow-lg h-full">
-        {/* Messages Container */}
+    <div className="w-full max-w-4xl h-screen flex flex-col">
+      {/* <Card className="flex flex-col shadow-lg h-full"> */}
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="sticky top-0 bg-white min-h-[64px]">
+        </div>
+        {/* Messages Container */}
+        <div className="flex-1 p-4 space-y-[24px] flex flex-col">
+          {/* <div className="spacer flex-1"></div> */}
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <p>Start a conversation...</p>
@@ -162,8 +172,9 @@ export function ChatApp() {
         </div>
 
         {/* Input Container */}
-        <div className="border-t p-4 flex gap-2">
+        <div className="sticky bottom-0 bg-white min-h-[100px] border-t p-4 flex gap-2">
           <Input
+            ref={inputRef}
             type="text"
             placeholder="Type your message..."
             value={input}
@@ -176,9 +187,9 @@ export function ChatApp() {
             Send
           </Button>
         </div>
-      </Card>
-      <div className="absolute top-4 right-4 border p-2 rounded bg-background w-64">
-      <div className="p-4 space-y-6 h-full flex flex-col">
+      {/* </Card> */}
+      <div className="fixed top-4 right-4 border p-2 rounded bg-background w-64">
+        <div className="p-4 space-y-6 h-full flex flex-col">
           <h3 className="font-semibold text-foreground">Settings</h3>
 
           <div className="space-y-4">
