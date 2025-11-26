@@ -50,6 +50,7 @@ export function ChatApp() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [threadId, setThreadId] = useState("")
   const [structuredOutput, setStructuredOutput] = useState<"null" | "PROFILE_LIST" | "PROFILE" | null>(null)
@@ -68,6 +69,59 @@ export function ChatApp() {
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+  
+  async function consumeStream(message) {
+      const response = await fetch("http://localhost:8000/chat/stream", {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+              message: message,
+              thread_id: null,
+              output_format: ""
+          }),
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      let lastChunk = null;
+
+      while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          console.log(decoder.decode(value));
+          const answer = decoder.decode(value)
+          
+          if (answer.includes("Processing: ")) {
+            const a = answer.split("Processing: ")[1]
+            setLoadingMessage(a);
+          }
+          
+          // Keep the latest chunk
+          lastChunk = answer;
+          
+          
+      }
+      setLoadingMessage("")
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: lastChunk,
+        sender: "bot",
+      }
+      setMessages((prev) => [...prev, botMessage])
+
+      console.log("Stream finished");
+      
+      setLoading(false)
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 200)
+  }
+
+  
 
   const handleSend = async () => {
     if (!input.trim()) return
@@ -81,24 +135,28 @@ export function ChatApp() {
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setLoading(true)
+    
+    
 
     try {
-      // Make API call to backend
-      const response = await axios.post("http://localhost:8000/chat", {
-        message: input,
-        thread_id: threadId,
-        output_format: structuredOutput,
-      })
+      consumeStream(input);
       
-      setThreadId(response.data.thread_id)
+      // Make API call to backend
+      // const response = await axios.post("http://localhost:8000/chat", {
+      //   message: input,
+      //   thread_id: threadId,
+      //   output_format: structuredOutput,
+      // })
+      
+      // setThreadId(response.data.thread_id)
 
       // Add bot response to list
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: response.data.answer,
-        sender: "bot",
-      }
-      setMessages((prev) => [...prev, botMessage])
+      // const botMessage: Message = {
+      //   id: (Date.now() + 1).toString(),
+      //   text: response.data.answer,
+      //   sender: "bot",
+      // }
+      // setMessages((prev) => [...prev, botMessage])
     } catch (error) {
       console.error("Error sending message:", error)
       // Add error message
@@ -109,10 +167,7 @@ export function ChatApp() {
       }
       setMessages((prev) => [...prev, errorMessage])
     } finally {
-      setLoading(false)
-      setTimeout(() => {
-        inputRef.current?.focus()
-      }, 200)
+      
     }
   }
 
@@ -163,7 +218,7 @@ export function ChatApp() {
             <div className="flex justify-start">
               <div className="bg-muted text-muted-foreground px-4 py-2 rounded-lg rounded-bl-none flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <p className="text-sm">Thinking...</p>
+                <p className="text-sm">{loadingMessage}</p>
               </div>
             </div>
           )}
@@ -183,7 +238,7 @@ export function ChatApp() {
             disabled={loading}
             className="flex-1"
           />
-          <Button onClick={handleSend} disabled={loading || !input.trim()} className="px-6">
+          <Button onClick={handleSend} disabled={loading} className="px-6">
             Send
           </Button>
         </div>
