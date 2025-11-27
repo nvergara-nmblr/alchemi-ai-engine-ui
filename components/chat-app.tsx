@@ -87,38 +87,105 @@ export function ChatApp() {
       const decoder = new TextDecoder();
       
       let lastChunk = null;
-
+      let buffer = "";
+      
+      let hasReceivedFinalMsg = false;
+      
       while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          console.log(decoder.decode(value));
-          const answer = decoder.decode(value)
+        const { value, done } = await reader.read();
+        if (done) break;
+      
+        buffer += decoder.decode(value, { stream: true });
+      
+        let lines = buffer.split("\n");
+        buffer = lines.pop(); // keep partial line
+        
+        
+      
+        for (const line of lines) {
+          if (line.trim().length === 0) continue;
+          const json = JSON.parse(line);
+          console.log("chunk:", json);
+          const answer = json.answer
           
           if (answer.includes("Processing: ")) {
             const a = answer.split("Processing: ")[1]
             setLoadingMessage(a);
+          } else if (answer != "") {
+            
+            
+            console.log('hasReceivedFinalMsg----', hasReceivedFinalMsg)
+            if (!hasReceivedFinalMsg) {
+              const botMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                text: answer,
+                sender: "bot",
+              }
+              setMessages((prev) => [...prev, botMessage])
+              hasReceivedFinalMsg = true;
+              
+              setLoadingMessage("")
+              setLoading(false)
+            } else {
+              // const lastMessage = messages[messages.length - 1];
+              
+              setMessages((prev) => {
+                const lastIndex = prev.length - 1;
+                if (lastIndex < 0) return []; // no messages yet
+              
+                const updatedLast = {
+                  ...prev[lastIndex],
+                  text: prev[lastIndex].text + answer,
+                };
+              
+                return [...prev.slice(0, lastIndex), updatedLast];
+              });
+            }
+            
+            
+            
+            
           }
-          
-          // Keep the latest chunk
-          lastChunk = answer;
-          
-          
+        }
       }
-      setLoadingMessage("")
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: lastChunk,
-        sender: "bot",
-      }
-      setMessages((prev) => [...prev, botMessage])
-
-      console.log("Stream finished");
       
+      setLoadingMessage("")
       setLoading(false)
       setTimeout(() => {
         inputRef.current?.focus()
       }, 200)
+
+      // while (true) {
+      //     const { value, done } = await reader.read();
+      //     if (done) break;
+
+      //     console.log(decoder.decode(value));
+      //     const answer = decoder.decode(value)
+          
+      //     if (answer.includes("Processing: ")) {
+      //       const a = answer.split("Processing: ")[1]
+      //       setLoadingMessage(a);
+      //     }
+          
+      //     // Keep the latest chunk
+      //     lastChunk = answer;
+          
+          
+      // }
+      // setLoadingMessage("")
+      // const botMessage: Message = {
+      //   id: (Date.now() + 1).toString(),
+      //   text: lastChunk,
+      //   sender: "bot",
+      // }
+      // setMessages((prev) => [...prev, botMessage])
+
+      // console.log("Stream finished");
+      
+      // setLoading(false)
+      // setTimeout(() => {
+      //   inputRef.current?.focus()
+      // }, 200)
   }
 
   
