@@ -100,21 +100,19 @@ export function ChatApp() {
         let lines = buffer.split("\n");
         buffer = lines.pop(); // keep partial line
         
-        
-      
+
         for (const line of lines) {
           if (line.trim().length === 0) continue;
           const json = JSON.parse(line);
-          console.log("chunk:", json);
           const answer = json.answer
+          const stepUpdateMessage = json.rag_state?.step_update_message
           
-          if (answer.includes("Processing: ")) {
-            const a = answer.split("Processing: ")[1]
-            setLoadingMessage(a);
-          } else if (answer != "") {
-            
-            
-            console.log('hasReceivedFinalMsg----', hasReceivedFinalMsg)
+          
+          console.log(stepUpdateMessage)
+          console.log(answer)
+          
+          
+          if (answer) {
             if (!hasReceivedFinalMsg) {
               const botMessage: Message = {
                 id: (Date.now() + 1).toString(),
@@ -127,8 +125,6 @@ export function ChatApp() {
               setLoadingMessage("")
               setLoading(false)
             } else {
-              // const lastMessage = messages[messages.length - 1];
-              
               setMessages((prev) => {
                 const lastIndex = prev.length - 1;
                 if (lastIndex < 0) return []; // no messages yet
@@ -141,10 +137,8 @@ export function ChatApp() {
                 return [...prev.slice(0, lastIndex), updatedLast];
               });
             }
-            
-            
-            
-            
+          } else if (stepUpdateMessage) {
+            setLoadingMessage(stepUpdateMessage);
           }
         }
       }
